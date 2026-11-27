@@ -1,0 +1,14 @@
+Available energy (kWh),Status,Method,Hours,"Water (L), demo","Energy used (kWh), demo"
+0.0,NO_FEASIBLE_METHOD,None,,,
+0.1,SUCCESS,Fog Collector,1,0.716,0.1
+0.2,SUCCESS,Fog Collector,2,1.432,0.2
+0.3,SUCCESS,Fog Collector,2,1.432,0.2
+0.4,SUCCESS,Fog Collector,4,2.865,0.4
+0.6,SUCCESS,Fog Collector,4,2.865,0.4
+0.8,SUCCESS,Fog Collector,4,2.865,0.4
+1.0,SUCCESS,Fog Collector,4,2.865,0.4
+1.5,SUCCESS,Fog Collector,4,2.865,0.4
+2.0,SUCCESS,Fog Collector,4,2.865,0.4
+3.0,SUCCESS,Fog Collector,4,2.865,0.4
+5.0,SUCCESS,Fog Collector,4,2.865,0.4
+8.0,SUCCESS,Fog Collector,4,2.865,0.4

@@ -1,83 +1,223 @@
-# AquaGent — Uncertainty + CSP (CS3081)
+# 💧 AquaGent
+
+**An explainable decision-support agent that chooses between a fog collector, a MOF-303 sorbent bed, or no plan — when weather evidence is uncertain and energy is limited.**
+
+![Status](https://img.shields.io/badge/status-prototype-0F7C78)
+![Python](https://img.shields.io/badge/python-3.10%2B-242379)
+![Streamlit](https://img.shields.io/badge/UI-Streamlit-E85B55)
+![Tests](https://img.shields.io/badge/tests-45%20passing-2f8a4d)
+![AI](https://img.shields.io/badge/AI-Bayesian%20inference%20%2B%20CSP-242379)
+
+CS3081 Artificial Intelligence · Effat University · Fall 2026 · Instructor: Dr. Naila Marir
+
+**[🌐 Interactive demo](https://zalameri.github.io/aquagent/)** · **[📁 Portfolio case study](https://zalameri.github.io/project.html?p=aquagent)** · **[📄 Technical report (PDF)](report/AquaGent_ACL_Report.pdf)**
+
+> All water and energy values are **simulation estimates** from stated assumptions. They are not field measurements and must not be used for real equipment decisions.
+
+---
+
+## 📸 Preview
 
 ![AquaGent interface](docs/screenshots/interface.png)
-
-Educational water-harvesting decision-support simulator comparing **Fog Collector** and **MOF Collector** (the selected Raschel-type mesh and MOF-303 material references).
-
-## AI methods
-
-- **2A Uncertainty / Bayesian inference:** one binary fog-sensor observation updates P(Fog) from a user-defined prior, sensitivity and specificity. Missing observation preserves the prior (no fabricated reading).
-- **2B Constraint Satisfaction:** two decision variables (harvesting method and operating duration). Backtracking enumerates assignments that satisfy safety, available time, energy budget and simulated weather constraints.
-- **Optimization:** among feasible plans only, maximize a *demonstration score* = illustrative liters / (1 + illustrative energy / available energy budget). Operator can approve/reject in UI; this never controls equipment.
-
-## Important limitations
-
-**No scientific validation has been performed.** Bayesian parameters are hypothetical; no actual calibration data were obtained. MOF suitability outside zero RH, fog LWC, mesh efficiency and all energy rates are **demonstration assumptions**, not verified equipment specifications. `water_liters_demo` and `energy_kwh_demo` may not be represented as measured field results. The probabilistic model treats fog presence as a binary event and one sensor observation; it does not yet infer fog from humidity or temperature. The independent sensor validation checks ranges, not plausibility of all physically possible failures. Do not use for real industrial decisions.
-
-## Run on Windows (PowerShell)
-
-```powershell
-cd aquagent
-python -m pip install -r requirements.txt
-python -m unittest discover -s tests -v
-python -m experiments.run_simulation
-python -m streamlit run app.py
-```
-
-Open the local Streamlit URL printed in the terminal (often http://localhost:8501).
-
-## Workflow
-1. Enter weather/plant data. The sidebar adjusts simulation assumptions for fog uncertainty.
-2. Bayesian inference calculates posterior fog probability.
-3. CSP enumerates feasible `(method, hours)` assignments.
-4. Score ranks feasible plans and shows the rationale and exclusions.
-5. Operator selects Approve or Reject (simulated only).
-6. View results and download run history CSV. Clear history from the UI.
-
-## Files
-- `src/model.py`: input schema, validation, Raschel fog flux scenario and MOF-303 literature-reference scenario
-- `src/uncertainty.py`: Bayesian update
-- `src/csp.py`: constraint checks and backtracking CSP
-- `src/decision.py`: integrated agent and scoring
-- `app.py`: Streamlit dashboard, operator approval, CSV export
-- `experiments/run_simulation.py`: reproducible simulated scenarios
-- `tests/`: unit tests (including scientific-reference scenario checks)
-- `docs/SCIENTIFIC_ASSUMPTIONS.md`: equations, citations, assumptions and limitations
-
-## Existing project migration
-This ZIP is a **separate V2 project**. Do not overwrite the current `Water-Harvesting-AI` folder until you back it up. Old modules such as `rules.py`, `sensor_guard.py`, and `decision.py` have different APIs and old tests should not be mixed into this project without porting. The current V2 doesn't claim to pass the old 32 tests; it has its own test suite.
-
-## Before submission
-- Confirm instructor approval for two students (official guidelines list 3–4).
-- Obtain measured or published values for an *identified* MOF and fog net; define unit size, location and period.
-- Calibrate sensor sensitivity/specificity and fog prior, and validate model vs held-out data.
-- Evaluate decision safety, correct abstention, and sensitivity to uncertainty settings.
-- Add project-specific research citations, GitHub link, ACL report, poster and portfolio site.
-- Follow your instructor's academic integrity guidance on AI-generated code/content and attribute contributions appropriately.
-
-## Scientific-reference update (November 2026)
-The selected simulated materials are **Raschel-type polymer fog mesh** and **MOF-303**. The model uses an explicit fog flux scenario and a *daily literature observation* of 0.210 L/kg/day for MOF-303 (Death Valley). **Neither is a forecast for Jeddah.** The MOF daily observation is scaled to shorter durations as an explicitly fictional classroom simplification, and assumed energy rates are not calibrated. See `docs/SCIENTIFIC_ASSUMPTIONS.md`.
-
-The `app.py` interface now includes editable mesh area, mesh efficiency, assumed fog liquid-water content and MOF mass; the existing Bayesian inference, CSP planning, operator approval, run history and CSV export remain intact.
-
-## Scientific-model adjustment (November 2026)
-
-- Removed unsupported 60% RH hard MOF cutoff. Only RH=0 excludes MOF in the simple reference scenario, with no claim of performance at low RH.
-- Replaced subtraction of L and kWh with a *dimensionless, declared demonstration heuristic*; energy limits still act as CSP hard constraints.
-- Literature MOF daily reference, fog-flux formula, and illustrative energy rates are unchanged; no field calibration is claimed.
-- The Streamlit UI in `app.py` is **unchanged**.
-
-
-## Screenshots
 
 | Inputs | Recommendation |
 |---|---|
 | ![Inputs](docs/screenshots/inputs.png) | ![Results](docs/screenshots/results.png) |
 
-## Author
+---
 
-Zainab Alameri, project lead. Built for CS3081 Artificial Intelligence and CS3151 Software Engineering at Effat University.
+## 🎯 Problem
 
-## Portfolio
+Water can be collected from air in two very different ways. A **fog mesh** catches droplets that are already in the air, so it needs fog and wind. A **MOF-303 sorbent bed** adsorbs water vapour and needs energy to release it. Humidity alone cannot tell an operator which one to run.
 
-Case study: <https://zalameri.github.io/project.html?p=aquagent>
+> **Research question:** How can an agent choose a fog collector, a MOF bed, or no safe option when weather evidence is uncertain and resources are limited?
+
+**Adversarial challenge (course theme: agents under adversarial conditions)**
+
+| Challenge | Where it appears | How AquaGent handles it |
+|---|---|---|
+| **Noisy observations** | The fog sensor can report fog that is not there, or miss real fog | A Bayesian update weighs the reading by the sensor's sensitivity and specificity; fog is allowed only if P(fog) ≥ 0.75 |
+| **Incomplete knowledge** | The fog reading or the humidity value can be missing or invalid | A missing fog reading keeps the prior and raises a warning; invalid inputs stop the agent with `SENSOR_WARNING` |
+
+---
+
+## ✨ Core features
+
+- **Bayesian fog probability** that accounts for sensor accuracy — no invented readings when the sensor is missing
+- **Backtracking CSP** over harvesting method × duration with safety, time, energy and weather constraints
+- **Explainable output:** ranked feasible plans plus the exact rules that rejected every other method
+- **Safe refusals:** `NO_FEASIBLE_METHOD` when nothing is safe, `SENSOR_WARNING` when inputs are invalid
+- **Human in the loop:** the operator approves or rejects; the agent never controls equipment
+- **Run history and CSV export** in the Streamlit dashboard
+- **Reproducible evaluation:** 45 unit tests, 10 scenarios and sensitivity sweeps from one script
+
+---
+
+## 🏗️ Architecture
+
+![AquaGent architecture](assets/architecture.png)
+
+| Layer | Files | Responsibility |
+|---|---|---|
+| 1 · Presentation | `app.py` (Streamlit) | Inputs, recommendation, dashboard, approve / reject |
+| 2 · Application flow | `app.py`, `src/decision.py` | Build `Inputs`, validate, call the models, collect results |
+| 3 · AI decision | `src/uncertainty.py`, `src/csp.py` | Bayesian fog probability; feasible (method, hours) plans |
+| 4 · Scientific model | `src/model.py` | Fog and MOF water estimates, energy assumptions |
+| 5 · Run data | Streamlit session, CSV export | History of runs and decisions |
+
+**Agent type:** model-based, goal- and utility-driven. **Environment:** partially observable, stochastic, episodic, static, discrete, single agent with a human operator.
+
+---
+
+## 🧠 How the agent decides
+
+**1 · Bayesian sensor model** (`src/uncertainty.py`)
+
+$$P(F \mid E^{+}) = \frac{s\,\pi}{s\,\pi + (1-c)(1-\pi)}$$
+
+Defaults: prior π = 0.35, sensitivity s = 0.90, specificity c = 0.90 (assumptions). A positive reading gives P(fog) = 0.829; a negative one gives 0.057.
+
+**2 · Backtracking CSP** (`src/csp.py`) over method ∈ {Fog, MOF} and hours ∈ {1, 2, 4, 8}
+
+| Constraint | Applies to |
+|---|---|
+| Safety inspection passed | both |
+| hours ≤ maximum hours | both |
+| hours × rate ≤ energy budget (rates 0.10 and 1.20 kWh/h, demo values) | both |
+| P(fog) ≥ 0.75, wind > 0, fog LWC > 0 | fog collector |
+| RH > 0 | MOF bed |
+
+**3 · Estimate and rank** (`src/model.py`, `src/decision.py`)
+
+$$L_{\text{fog}} = 3.6 \cdot \text{LWC} \cdot v \cdot A \cdot \eta \cdot H \cdot P(F \mid E) \qquad L_{\text{MOF}} = 0.210 \cdot m_{\text{MOF}} \cdot H / 24 \qquad S = \frac{L}{1 + E / E_{\text{budget}}}$$
+
+The MOF rate (0.210 L per kg per day) is the Death Valley field result of Song et al. (2023), scaled by hours as a classroom simplification. Ties in *S* go to the plan that uses less energy.
+
+---
+
+## 🚀 Quick start
+
+Requires **Python 3.10+**.
+
+```bash
+git clone https://github.com/Zalameri/aquagent.git
+cd aquagent
+python -m pip install -r requirements.txt
+
+python -m streamlit run app.py          # dashboard at http://localhost:8501
+```
+
+On Windows PowerShell the same commands work; use `py` instead of `python` if needed.
+
+---
+
+## 🧪 Tests and experiments
+
+```bash
+python -m unittest discover -s tests -v        # 45 unit tests
+python -m experiments.run_simulation           # 10 scenarios → experiments/results.csv
+python analysis/generate_analysis.py           # scenarios + sensitivity sweeps → analysis/data/*.csv
+python analysis/make_report_figures.py         # report figures → report/source/figures/
+```
+
+| Scenario | P(fog) | Result | Water (L, sim.) | Energy (kWh) |
+|---|---:|---|---:|---:|
+| Fog detected | 0.829 | Fog 4 h | 2.865 | 0.4 |
+| Fog absent | 0.057 | MOF 4 h | 0.035 | 4.8 |
+| Fog sensor missing | 0.350 | MOF 4 h (warning) | 0.035 | 4.8 |
+| Low humidity (30%) | 0.057 | MOF 4 h | 0.035 | 4.8 |
+| No energy | 0.829 | `NO_FEASIBLE_METHOD` | — | — |
+| Unsafe | 0.829 | `NO_FEASIBLE_METHOD` | — | — |
+| Missing humidity | — | `SENSOR_WARNING` | — | — |
+| Invalid humidity (120%) | — | `SENSOR_WARNING` | — | — |
+| Low sensitivity (s = 0.55) | 0.748 | MOF 4 h | 0.035 | 4.8 |
+| Tight energy (0.2 kWh) | 0.829 | Fog 2 h | 1.432 | 0.2 |
+
+The 10 scenarios are hand-designed test cases, not a statistical sample, so no "accuracy" is reported from them. The 45/45 figure is a software test pass count.
+
+---
+
+## 📊 Results
+
+| Scenario outcomes | Energy budget and sensor reliability |
+|---|---|
+| ![Scenarios](report/source/figures/scenarios.png) | ![Energy and posterior](report/source/figures/energy_posterior.png) |
+
+![Sensitivity sweeps](report/source/figures/sensitivity.png)
+
+**Key findings**
+
+1. **Bayesian evidence decides when fog can be trusted.** With sensitivity 0.55 the posterior is 0.748, just under the 0.75 threshold, so the agent switches to MOF. A "yes" reading only passes the threshold when sensitivity ≥ 0.557.
+2. **The CSP shapes the plan in discrete steps.** 0 kWh → no plan; 0.1 kWh → fog 1 h; 0.2–0.3 kWh → fog 2 h; ≥ 0.4 kWh → fog 4 h (the 4 h limit then binds).
+3. **The agent refuses instead of guessing** when inputs are missing or invalid, or when no plan is safe.
+
+---
+
+## ⚠️ Limitations
+
+- The prior, sensor sensitivity/specificity, threshold and energy rates are **assumptions**, not calibrated values.
+- The fog equation is linear and uses an assumed liquid-water content and mesh efficiency.
+- The MOF model scales one daily field result by hours; it has **no humidity-dependent isotherm**, so its yield is flat in RH (see the sensitivity figure, panel d).
+- Fog (2 m²) and MOF (1 kg) are not matched in size, so the ranking does not show that one technology is better.
+- Inputs are entered by hand; there are no live sensors. Details: [`docs/SCIENTIFIC_ASSUMPTIONS.md`](docs/SCIENTIFIC_ASSUMPTIONS.md).
+
+---
+
+## 📁 Repository structure
+
+```
+aquagent/
+├── app.py                      Streamlit dashboard (inputs, recommendation, approval, CSV export)
+├── src/
+│   ├── model.py                inputs, validation, fog and MOF-303 estimates
+│   ├── uncertainty.py          Bayesian fog posterior
+│   ├── csp.py                  constraints and backtracking search
+│   └── decision.py             agent pipeline, scoring, explanations
+├── tests/                      45 unit tests
+├── experiments/                10 reproducible scenarios + results.csv
+├── analysis/
+│   ├── generate_analysis.py    scenarios and sensitivity sweeps → data/*.csv
+│   ├── make_report_figures.py  report figures from the CSV files
+│   ├── data/                   scenario_results, sensitivity_values, energy_budget_sensitivity
+│   └── figures/                quick-look charts
+├── report/
+│   ├── AquaGent_ACL_Report.pdf technical report (ACL format, 8 pages)
+│   └── source/                 LaTeX source (ACL template), bibliography, figures
+├── docs/                       AI methods, scientific assumptions, changelog, screenshots
+├── assets/                     README images
+└── requirements.txt
+```
+
+---
+
+## 📄 Documents
+
+| Document | Link |
+|---|---|
+| Technical report (ACL format) | [report/AquaGent_ACL_Report.pdf](report/AquaGent_ACL_Report.pdf) |
+| Report LaTeX source | [report/source/](report/source/) (upload the folder to Overleaf to rebuild) |
+| AI methods | [docs/AI_METHODS.md](docs/AI_METHODS.md) |
+| Scientific assumptions | [docs/SCIENTIFIC_ASSUMPTIONS.md](docs/SCIENTIFIC_ASSUMPTIONS.md) |
+| Interactive demo and case study | [zalameri.github.io/aquagent](https://zalameri.github.io/aquagent/) |
+
+---
+
+## 👥 Team
+
+| Member | Contribution |
+|---|---|
+| **Zainab Alameri** ([@Zalameri](https://github.com/Zalameri)) | Equal share — all parts done jointly |
+| **Abubaker Baobaid** | Equal share — all parts done jointly |
+
+Both members worked together on every part of the project — literature review, agent design, Bayesian model, CSP, interface, tests, experiments and report — and shared the work equally.
+
+---
+
+## 📚 References and acknowledgements
+
+- Song, W. et al. (2023). MOF water harvester produces water from Death Valley desert air in ambient sunlight. *Nature Water*, 1, 626–634.
+- Alzahrani, A. S. & Abdelbaki, A. M. (2025). Fog harvesting implementation as a sustainable water source: a feasibility study in Al-Baha, Saudi Arabia. *J. Umm Al-Qura Univ. Eng. Arch.*
+- Russell, S. & Norvig, P. (2021). *Artificial Intelligence: A Modern Approach*, 4th ed. Pearson.
+- Full reference list in the [technical report](report/AquaGent_ACL_Report.pdf).
+
+Built with Python, Streamlit, NumPy and Matplotlib. Literature search with Elicit. Use of generative AI assistance is declared in the technical report, as required by the course's academic-integrity policy.
