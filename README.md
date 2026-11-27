@@ -10,6 +10,8 @@
 
 CS3081 Artificial Intelligence · Effat University · Fall 2026 · Instructor: Dr. Naila Marir
 
+> The same project is also kept in the course repository: **[CS3081AI/Projects/AquaGent](https://github.com/Zalameri/CS3081AI/tree/main/Projects/AquaGent)**.
+
 **[🌐 Interactive demo](https://zalameri.github.io/aquagent/)** · **[📁 Portfolio case study](https://zalameri.github.io/project.html?p=aquagent)** · **[📄 Technical report (PDF)](report/AquaGent_ACL_Report.pdf)**
 
 > All water and energy values are **simulation estimates** from stated assumptions. They are not field measurements and must not be used for real equipment decisions.
